@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>{{ app_name }}</h1>
+  <p>你好，{{ username }}。</p>
+</div>
+
+<div class="quick-links">
+  <a href="/tasks/post/new" class="card quick-link">
+    <strong>录入帖子</strong>
+    <span class="muted">创建帖子任务，生成公开链接</span>
+  </a>
+  <a href="/tasks/comment/new" class="card quick-link">
+    <strong>录入评论</strong>
+    <span class="muted">创建评论任务，生成公开链接</span>
+  </a>
+  <a href="/tasks/posts" class="card quick-link">
+    <strong>帖子任务</strong>
+    <span class="muted">查看和管理帖子任务</span>
+  </a>
+  <a href="/tasks/comments" class="card quick-link">
+    <strong>评论任务</strong>
+    <span class="muted">查看和管理评论任务</span>
+  </a>
+</div>
+{% endblock %}

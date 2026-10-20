@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}创建成功 - Reddit 任务管理系统{% endblock %}
+
+{% block content %}
+<div class="card card-form">
+  <h1>创建成功</h1>
+
+  <div class="alert alert-success">任务创建成功</div>
+
+  <div class="highlight-box">
+    <p><strong>任务 ID：</strong>{{ task_id }}</p>
+    <p>
+      <strong>公开链接：</strong>
+      <a href="{{ absolute_url }}" id="public-link">{{ absolute_url }}</a>
+      <button type="button" id="copy-btn" class="btn btn-sm" onclick="copyPublicLink()">复制</button>
+    </p>
+  </div>
+
+  <p>
+    <a href="{{ back_url }}" class="btn">继续录入</a>
+    <a href="/tasks/{{ task_id }}" class="btn">查看任务详情</a>
+  </p>
+</div>
+
+<script>
+function copyPublicLink() {
+  var text = document.getElementById('public-link').textContent;
+  var btn = document.getElementById('copy-btn');
+  function done() {
+    var old = btn.textContent;
+    btn.textContent = '已复制';
+    setTimeout(function () { btn.textContent = old; }, 1500);
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done);
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    done();
+  }
+}
+</script>
+{% endblock %}

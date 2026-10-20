@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}账号管理 - Reddit 任务管理系统{% endblock %}
+
+{% block content %}
+{% set active_admin_count = users | selectattr('is_admin') | selectattr('is_active') | list | length %}
+
+<div class="page-head">
+  <h1>账号管理</h1>
+  <a href="/admin/users/new" class="btn btn-primary">新建账号</a>
+</div>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>用户名</th>
+        <th>角色</th>
+        <th>状态</th>
+        <th>创建时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      {% set is_self = u.id == current_user_id %}
+      {% set is_last_admin = u.is_admin and u.is_active and active_admin_count == 1 %}
+      <tr>
+        <td>{{ u.username }}{% if is_self %} <span class="muted">（我）</span>{% endif %}</td>
+        <td>{% if u.is_admin %}<span class="badge badge-admin">管理员</span>{% else %}<span class="badge badge-operator">普通操作员</span>{% endif %}</td>
+        <td>{% if u.is_active %}<span class="badge badge-enabled">启用</span>{% else %}<span class="badge badge-disabled">禁用</span>{% endif %}</td>
+        <td>{{ u.created_at }}</td>
+        <td class="actions">
+          <button type="button" class="btn btn-sm" onclick="document.getElementById('reset-dialog-{{ u.id }}').showModal()">重置密码</button>
+
+          {% if u.is_active %}
+            {% if is_self %}
+              <span class="btn-tooltip" title="不能禁用当前登录的自己"><button type="button" class="btn btn-danger btn-sm" disabled>禁用</button></span>
+            {% elif is_last_admin %}
+              <span class="btn-tooltip" title="不能禁用系统中最后一个管理员"><button type="button" class="btn btn-danger btn-sm" disabled>禁用</button></span>
+            {% else %}
+              <form method="post" action="/admin/users/{{ u.id }}/delete">
+                <button type="submit" class="btn btn-danger btn-sm">禁用</button>
+              </form>
+            {% endif %}
+          {% endif %}
+
+          {% if u.is_admin %}
+            {% if is_last_admin %}
+              <span class="btn-tooltip" title="不能降级系统中最后一个管理员"><button type="button" class="btn btn-sm" disabled>取消管理员</button></span>
+            {% else %}
+              <form method="post" action="/admin/users/{{ u.id }}/toggle-admin">
+                <button type="submit" class="btn btn-sm">取消管理员</button>
+              </form>
+            {% endif %}
+          {% else %}
+            <form method="post" action="/admin/users/{{ u.id }}/toggle-admin">
+              <button type="submit" class="btn btn-sm">设为管理员</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% for u in users %}
+<dialog id="reset-dialog-{{ u.id }}" class="modal">
+  <form method="post" action="/admin/users/{{ u.id }}/reset-password" onsubmit="return checkResetPassword(this)">
+    <h3>重置密码：{{ u.username }}</h3>
+    <div class="form-group">
+      <label>新密码</label>
+      <input type="password" name="password" minlength="8" required>
+      <small class="muted">至少 8 位</small>
+    </div>
+    <div class="form-group">
+      <label>再次输入新密码</label>
+      <input type="password" name="confirm_password" required>
+      <small class="muted error-hint" style="display:none">两次输入不一致</small>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn" onclick="this.closest('dialog').close()">取消</button>
+      <button type="submit" class="btn btn-primary">确定</button>
+    </div>
+  </form>
+</dialog>
+{% endfor %}
+
+<script>
+function checkResetPassword(form) {
+  var p = form.elements['password'].value;
+  var c = form.elements['confirm_password'].value;
+  if (p !== c) {
+    var hint = form.querySelector('.error-hint');
+    if (hint) hint.style.display = 'block';
+    return false;
+  }
+  return true;
+}
+</script>
+{% endblock %}

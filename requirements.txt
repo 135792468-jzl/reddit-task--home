@@ -1,0 +1,24 @@
+# Web 框架与服务器
+fastapi
+uvicorn[standard]
+
+# 服务端模板渲染
+jinja2
+
+# 数据库：psycopg 3 + 连接池
+psycopg[binary]
+psycopg_pool
+
+# 密码哈希
+passlib[bcrypt]
+bcrypt==4.0.1   # 锁定 4.0.x：bcrypt>=4.1 移除了 passlib 探测版本依赖的 __about__，会产生告警
+
+# 会话（SessionMiddleware）与表单解析（登录/提交凭证后续使用）
+itsdangerous
+python-multipart
+
+# 环境变量加载
+python-dotenv
+
+# HTTP 客户端（上传到 Supabase Storage）
+httpx

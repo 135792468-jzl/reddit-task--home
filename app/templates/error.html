@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}{{ status_code }} - Reddit 任务管理系统{% endblock %}
+
+{% block content %}
+<div class="card error-card">
+  <h1>{{ status_code }}</h1>
+  <p>{{ message }}</p>
+  <p><a href="/" class="btn">返回首页</a></p>
+</div>
+{% endblock %}

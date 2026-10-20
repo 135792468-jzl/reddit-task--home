@@ -1,0 +1,88 @@
+{% extends "public/base.html" %}
+
+{% block title %}Task #{{ task.id }}{% endblock %}
+
+{% block content %}
+<div class="public-head">
+  <h1>Task #{{ task.id }}</h1>
+  <span class="badge badge-pending">Pending</span>
+</div>
+
+{% if task.task_type == 'post' %}
+  <div class="card">
+    <h2>Task Details</h2>
+    <div class="field-list">
+      <span class="field-label">Title</span>
+      <span class="field-value">{{ task.title }}</span>
+      <span class="field-label">Subreddit</span>
+      <span class="field-value">{{ task.subreddit }}</span>
+      {% if task.flair_text %}
+        <span class="field-label">Flair</span>
+        <span class="field-value">{{ task.flair_text }}</span>
+      {% endif %}
+      {% if task.body %}
+        <span class="field-label">Body</span>
+        <div class="field-value pre-wrap">{{ task.body }}</div>
+      {% endif %}
+      {% if media_url %}
+        <div class="field-full">
+          {% if task.media_type == 'video/mp4' %}
+            <video src="{{ media_url }}" controls class="media-preview"></video>
+          {% else %}
+            <img src="{{ media_url }}" alt="Task media" class="media-preview">
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <h2>Task Details</h2>
+    <div class="field-list">
+      {% if task.target_comment_url %}
+        <span class="field-label">Target Comment URL</span>
+        <span class="field-value">
+          {% if safe_comment_url %}<a href="{{ safe_comment_url }}" target="_blank">{{ task.target_comment_url }}</a>
+          {% else %}{{ task.target_comment_url }}{% endif %}
+        </span>
+      {% else %}
+        <span class="field-label">Target Post URL</span>
+        <span class="field-value">
+          {% if safe_post_url %}<a href="{{ safe_post_url }}" target="_blank">{{ task.target_post_url }}</a>
+          {% else %}{{ task.target_post_url }}{% endif %}
+        </span>
+      {% endif %}
+      <span class="field-label">Comment Content</span>
+      <div class="field-value pre-wrap">{{ task.comment_body }}</div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="card">
+  <h2>Submit Proof</h2>
+  {% if errors %}
+    <div class="alert alert-error">
+      {% for e in errors %}<p>{{ e }}</p>{% endfor %}
+    </div>
+  {% endif %}
+  <form method="post" action="/t/{{ task.public_token }}/submit" enctype="multipart/form-data">
+    <div class="form-group">
+      <label>Result Link <span class="required">*</span></label>
+      <input type="text" name="result_url" value="{{ form_result_url or '' }}" required>
+    </div>
+    <div class="form-group">
+      <label>Screenshot <span class="required">*</span></label>
+      <input type="file" name="screenshot" accept="image/jpeg,image/png" required>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Submit and Lock Task</button>
+    </div>
+    <div class="form-group">
+      <label>
+        <input type="checkbox" name="confirm" {% if form_confirm %}checked{% endif %} required>
+        <strong>I confirm this is submitted. The link will be locked and cannot be modified.</strong>
+      </label>
+    </div>
+  </form>
+</div>
+{% endblock %}

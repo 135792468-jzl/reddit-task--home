@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}任务详情 #{{ task.id }} - Reddit 任务管理系统{% endblock %}
+
+{% block content %}
+<div class="detail-head">
+  <div>
+    <a href="{{ '/tasks/posts' if task.task_type == 'post' else '/tasks/comments' }}" class="back-link">← 返回列表</a>
+    <h1>
+      {% if task.task_type == 'post' %}{{ task.title }}{% else %}评论任务 #{{ task.id }}{% endif %}
+      {% if task.status == 'completed' %}<span class="badge badge-completed">已完成</span>
+      {% else %}<span class="badge badge-pending">待完成</span>{% endif %}
+    </h1>
+  </div>
+  <div class="detail-actions">
+    <button type="button" class="copy-btn btn btn-sm" data-url="{{ absolute_url }}">复制当前链接</button>
+    {% if task.status == 'completed' %}
+    <form method="post" action="/tasks/{{ task.id }}/reset" onsubmit="return confirm('旧链接将立即失效，确定重置？');">
+      <button type="submit" class="btn btn-danger btn-sm">重置为待完成</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if flash %}<div class="alert alert-success">{{ flash }}</div>{% endif %}
+
+<div class="card">
+  <h2>任务内容</h2>
+  <div class="field-list">
+    {% if task.task_type == 'post' %}
+      <span class="field-label">目标社区</span>
+      <span class="field-value">{{ task.subreddit }}</span>
+      {% if task.flair_text %}
+        <span class="field-label">标签</span>
+        <span class="field-value">{{ task.flair_text }}</span>
+      {% endif %}
+      <span class="field-label">正文</span>
+      <div class="field-value pre-wrap">{{ task.body }}</div>
+      {% if media_url %}
+        <div class="field-full">
+          {% if task.media_type == 'video/mp4' %}
+            <video src="{{ media_url }}" controls class="media-preview"></video>
+          {% else %}
+            <img src="{{ media_url }}" alt="任务媒体" class="media-preview">
+          {% endif %}
+        </div>
+      {% endif %}
+    {% else %}
+      <span class="field-label">目标帖子链接</span>
+      <span class="field-value">
+        {% if safe_post_url %}<a href="{{ safe_post_url }}" target="_blank">{{ task.target_post_url }}</a>
+        {% else %}{{ task.target_post_url }}{% endif %}
+      </span>
+      <span class="field-label">评论内容</span>
+      <div class="field-value pre-wrap">{{ task.comment_body }}</div>
+      {% if task.target_comment_url %}
+        <span class="field-label">目标评论链接</span>
+        <span class="field-value">
+          {% if safe_comment_url %}<a href="{{ safe_comment_url }}" target="_blank">{{ task.target_comment_url }}</a>
+          {% else %}{{ task.target_comment_url }}{% endif %}
+        </span>
+      {% endif %}
+    {% endif %}
+
+    <span class="field-label">创建人</span>
+    <span class="field-value">{{ task.created_by_name }}</span>
+    <span class="field-label">创建时间</span>
+    <span class="field-value">{{ task.created_at }}</span>
+    <span class="field-label">公开链接</span>
+    <span class="field-value">
+      <a href="{{ public_absolute_url }}" target="_blank">{{ public_absolute_url }}</a>
+      <button type="button" class="copy-btn btn btn-sm" data-url="{{ public_absolute_url }}">复制</button>
+    </span>
+  </div>
+</div>
+
+<div class="card">
+  <h2>提交记录（共 {{ submissions|length }} 条）</h2>
+  {% if submissions %}
+  <div class="submission-list">
+    {% for s in submissions %}
+    <div class="submission-item">
+      <div class="submission-meta">
+        <span>{{ s.created_at }}</span>
+        {% if s.submitter_ip %}<span>IP：{{ s.submitter_ip }}</span>{% endif %}
+      </div>
+      <div class="submission-body">
+        {% if s.result_url %}<p>结果链接：<a href="{{ s.result_url }}" target="_blank">{{ s.result_url }}</a></p>{% endif %}
+        {% if s.screenshot_url %}
+          <div class="screenshot-box">
+            <a href="{{ s.screenshot_url }}" target="_blank" rel="noopener">
+              <img src="{{ s.screenshot_url }}" alt="截图" class="screenshot-thumb" loading="lazy"
+                   onerror="this.closest('.screenshot-box').classList.add('broken')">
+            </a>
+            <span class="screenshot-error">截图加载失败</span>
+          </div>
+        {% else %}
+          <div class="screenshot-missing">无法加载截图（或文件已丢失）</div>
+        {% endif %}
+        {% if s.submitter_user_agent %}<p class="muted ua" title="{{ s.submitter_user_agent }}">用户代理（User-Agent）：{{ s.submitter_user_agent }}</p>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">暂无提交记录</p>
+  {% endif %}
+</div>
+
+{% include "tasks/_copy_script.html" %}
+{% endblock %}

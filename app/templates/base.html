@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Reddit 任务管理系统{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+    {% if current_user %}
+    <nav class="topnav">
+        <div class="nav-links">
+            <a href="/tasks/post/new" class="{{ 'active' if active_page == 'post_new' else '' }}">录入帖子</a>
+            <a href="/tasks/comment/new" class="{{ 'active' if active_page == 'comment_new' else '' }}">录入评论</a>
+            <a href="/tasks/posts" class="{{ 'active' if active_page == 'posts' else '' }}">帖子任务</a>
+            <a href="/tasks/comments" class="{{ 'active' if active_page == 'comments' else '' }}">评论任务</a>
+            {% if current_user.is_admin %}<a href="/admin/users" class="{{ 'active' if active_page == 'admin_users' else '' }}">账号管理</a>{% endif %}
+        </div>
+        <div class="nav-user">
+            <span>{{ current_user.username }}</span>
+            <form method="post" action="/logout">
+                <button type="submit" class="btn btn-sm">退出</button>
+            </form>
+        </div>
+    </nav>
+    {% endif %}
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>Reddit 任务管理系统</p>
+    </footer>
+</body>
+</html>

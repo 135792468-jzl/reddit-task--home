@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}新建账号 - Reddit 任务管理系统{% endblock %}
+
+{% block content %}
+<div class="card card-form">
+  <h1>新建账号</h1>
+
+  {% if errors %}
+    <div class="alert alert-error">
+      {% for e in errors %}<p>{{ e }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" action="/admin/users">
+    <div class="form-group">
+      <label>用户名 <span class="required">*</span></label>
+      <input type="text" name="username" value="{{ username }}" required>
+    </div>
+
+    <div class="form-group">
+      <label>密码 <span class="required">*</span></label>
+      <input type="password" name="password" minlength="8" required>
+      <small class="muted">至少 8 位</small>
+    </div>
+
+    <div class="form-group">
+      <label>角色</label>
+      <label class="radio-inline"><input type="radio" name="is_admin" value="0" checked> 普通操作员</label>
+      <label class="radio-inline"><input type="radio" name="is_admin" value="1"> 管理员</label>
+    </div>
+
+    <div class="form-actions">
+      <a href="/admin/users" class="btn">取消</a>
+      <button type="submit" class="btn btn-primary">创建账号</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
