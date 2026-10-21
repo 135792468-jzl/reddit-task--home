@@ -29,7 +29,7 @@
   <div class="field-list">
     {% if task.task_type == 'post' %}
       <span class="field-label">目标社区</span>
-      <span class="field-value">{{ task.subreddit }}</span>
+      <span class="field-value"><span class="badge-list">{% for s in task.subreddits or [] %}<span class="badge badge-subreddit">{{ s }}</span>{% endfor %}</span></span>
       {% if task.flair_text %}
         <span class="field-label">标签</span>
         <span class="field-value">{{ task.flair_text }}</span>

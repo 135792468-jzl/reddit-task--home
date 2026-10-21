@@ -27,8 +27,16 @@
 
     <div class="form-group">
       <label>目标社区 <span class="required">*</span></label>
-      <input type="text" name="subreddit" value="{{ subreddit }}" placeholder="例如：python" required>
-      <small class="muted">不要带 r/ 前缀</small>
+      <div id="subreddit-list">
+        {% for s in subreddits %}
+        <div class="subreddit-row">
+          <input type="text" name="subreddits" value="{{ s }}" placeholder="例如：python">
+          {% if not loop.first %}<button type="button" class="btn btn-sm btn-danger btn-remove-subreddit">删除</button>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" id="add-subreddit" class="btn btn-sm">+ 添加社区</button>
+      <small class="muted">可添加多个社区；系统会自动去空格、去 r/ 前缀、去重</small>
     </div>
 
     <div class="form-group">
@@ -55,5 +63,31 @@ document.getElementById('media-input').addEventListener('change', function () {
   var name = this.files && this.files.length ? this.files[0].name : '';
   document.getElementById('media-filename').textContent = name;
 });
+</script>
+
+<script>
+(function () {
+  var list = document.getElementById('subreddit-list');
+  document.getElementById('add-subreddit').addEventListener('click', function () {
+    var row = document.createElement('div');
+    row.className = 'subreddit-row';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.name = 'subreddits';
+    input.placeholder = '例如：python';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-danger btn-remove-subreddit';
+    btn.textContent = '删除';
+    row.appendChild(input);
+    row.appendChild(btn);
+    list.appendChild(row);
+    input.focus();
+  });
+  list.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn-remove-subreddit');
+    if (btn) { btn.closest('.subreddit-row').remove(); }
+  });
+})();
 </script>
 {% endblock %}

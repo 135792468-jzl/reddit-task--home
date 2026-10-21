@@ -60,7 +60,7 @@ def _client_ip(request: Request):
 def _fetch_task(conn, token):
     return conn.execute(
         """
-        select id, public_token, task_type, title, body, subreddit, flair_text,
+        select id, public_token, task_type, title, body, subreddits, flair_text,
                media_path, media_type, target_post_url, comment_body, target_comment_url, status
         from tasks
         where public_token = %s

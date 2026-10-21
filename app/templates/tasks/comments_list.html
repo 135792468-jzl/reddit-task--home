@@ -8,16 +8,32 @@
   <a href="/tasks/comment/new" class="btn btn-primary">新建任务</a>
 </div>
 
-<div class="filter-bar">
-  <a href="/tasks/comments" class="{{ 'active' if filter_status == '' else '' }}">全部</a>
-  <a href="/tasks/comments?status=pending" class="{{ 'active' if filter_status == 'pending' else '' }}">待完成</a>
-  <a href="/tasks/comments?status=editing" class="{{ 'active' if filter_status == 'editing' else '' }}">编辑中</a>
-  <a href="/tasks/comments?status=completed" class="{{ 'active' if filter_status == 'completed' else '' }}">已完成</a>
-</div>
+<form method="get" action="/tasks/comments" class="filter-form">
+  <input type="text" name="id" value="{{ request.query_params.get('id') or '' }}" placeholder="任务 ID">
+  <input type="text" name="keyword" value="{{ request.query_params.get('keyword') or '' }}" placeholder="标题/目标链接">
+  <select name="status">
+    <option value="">全部</option>
+    <option value="pending" {{ 'selected' if request.query_params.get('status') == 'pending' else '' }}>待完成</option>
+    <option value="editing" {{ 'selected' if request.query_params.get('status') == 'editing' else '' }}>编辑中</option>
+    <option value="completed" {{ 'selected' if request.query_params.get('status') == 'completed' else '' }}>已完成</option>
+  </select>
+  <input type="date" name="date" value="{{ request.query_params.get('date') or '' }}">
+  <button type="submit" class="btn btn-primary btn-sm">搜索</button>
+  <a href="/tasks/comments" class="btn btn-sm">重置</a>
+</form>
 
 {% if tasks %}
 <div class="table-wrap">
-  <table class="table">
+  <table class="table table-fixed">
+    <colgroup>
+      <col style="width: 80px">
+      <col>
+      <col style="width: 110px">
+      <col style="width: 85px">
+      <col style="width: 90px">
+      <col style="width: 150px">
+      <col style="width: 205px">
+    </colgroup>
     <thead>
       <tr>
         <th>任务 ID</th>
@@ -25,7 +41,7 @@
         <th>是否回复评论</th>
         <th>状态</th>
         <th>公开链接</th>
-        <th>提交结果链接</th>
+        <th style="max-width: 150px">提交结果链接</th>
         <th>操作</th>
       </tr>
     </thead>
@@ -33,7 +49,7 @@
       {% for task in tasks %}
       <tr>
         <td class="col-id">{{ task.id }}</td>
-        <td><a href="{{ task.target_post_url }}" target="_blank">{{ task.target_post_url }}</a></td>
+        <td><a href="{{ task.target_post_url }}" target="_blank" class="link-truncate" title="{{ task.target_post_url }}">{{ task.target_post_url }}</a></td>
         <td>{{ '是' if task.is_reply else '否' }}</td>
         <td>
           {% if task.status == 'completed' %}<span class="badge badge-completed">已完成</span>
@@ -44,7 +60,7 @@
           <button type="button" class="copy-btn btn btn-sm" data-url="{{ task.absolute_url }}">复制链接</button>
         </td>
         <td>
-          {% if task.result_url %}<a href="{{ task.result_url }}" target="_blank">{{ task.result_url }}</a>{% endif %}
+          {% if task.result_url %}<a href="{{ task.result_url }}" target="_blank" class="link-truncate link-truncate--result" title="{{ task.result_url }}">{{ task.result_url }}</a>{% endif %}
         </td>
         <td>
           <div class="row-actions">

@@ -1,4 +1,5 @@
 """任务创建路由（需登录）。"""
+import datetime
 import logging
 from typing import Optional
 
@@ -18,11 +19,61 @@ router = APIRouter(prefix="/tasks")
 _STATUS_LABELS = {"pending": "待完成", "editing": "编辑中", "completed": "已完成"}
 
 
+def _clean_subreddits(raw):
+    """清洗多社区输入：去空格、去 r/ 前缀、过滤空值、去重（大小写不敏感，保持顺序）。"""
+    result = []
+    seen = set()
+    for item in raw or []:
+        name = (item or "").strip()
+        if name.lower().startswith("r/"):
+            name = name[2:].strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(name)
+    return result
+
+
+def _apply_list_filters(conditions, params, id, keyword, status, date, keyword_col):
+    """把 id / keyword / status / date 追加为参数化筛选条件。
+
+    keyword_col 为模糊匹配列名（帖子用 title、评论用 target_post_url），
+    由调用方硬编码传入，不来自用户输入；其余值全部参数化。
+    """
+    status = (status or "").strip()
+    if status in ("pending", "editing", "completed"):
+        conditions.append("t.status = %s")
+        params.append(status)
+
+    id_clean = (id or "").strip()
+    if id_clean and id_clean.isdigit():
+        conditions.append("t.id = %s")
+        params.append(int(id_clean))
+
+    kw = (keyword or "").strip()
+    if kw:
+        conditions.append(f"t.{keyword_col} ILIKE %s")
+        params.append(f"%{kw}%")
+
+    date_clean = (date or "").strip()
+    if date_clean:
+        try:
+            day = datetime.date.fromisoformat(date_clean)
+        except ValueError:
+            day = None
+        if day is not None:
+            conditions.append("DATE(t.created_at) = %s")
+            params.append(day)
+
+
 def _fetch_task_by_id(conn, task_id):
     """按 id 取任务（含全部内容字段）。"""
     return conn.execute(
         """
-        select id, public_token, task_type, title, body, subreddit, flair_text,
+        select id, public_token, task_type, title, body, subreddits, flair_text,
                media_path, media_type, target_post_url, comment_body, target_comment_url,
                status, created_by_name, created_at
         from tasks
@@ -41,7 +92,7 @@ def _render_post_form(request, errors=None, values=None, status_code=200):
             "errors": errors or [],
             "title": values.get("title", ""),
             "body": values.get("body", ""),
-            "subreddit": values.get("subreddit", ""),
+            "subreddits": values.get("subreddits") or [""],
             "flair_text": values.get("flair_text", ""),
         },
         status_code=status_code,
@@ -78,7 +129,7 @@ def _render_post_edit(request, task, values, errors=None, status_code=200):
         "errors": errors or [],
         "title": values.get("title", task["title"] or ""),
         "body": values.get("body", task["body"] or ""),
-        "subreddit": values.get("subreddit", task["subreddit"] or ""),
+        "subreddits": values.get("subreddits") or (task["subreddits"] or [""]),
         "flair_text": values.get("flair_text", task["flair_text"] or ""),
     }
     if task["media_path"]:
@@ -113,7 +164,7 @@ def create_post_task(
     request: Request,
     title: str = Form(...),
     body: str = Form(""),
-    subreddit: str = Form(...),
+    subreddits: list[str] = Form(default=[]),
     flair_text: str = Form(""),
     media: Optional[UploadFile] = File(None),
     current=Depends(get_current_user),
@@ -123,7 +174,7 @@ def create_post_task(
     values = {
         "title": title,
         "body": body,
-        "subreddit": subreddit,
+        "subreddits": subreddits,
         "flair_text": flair_text,
     }
     errors = []
@@ -134,8 +185,8 @@ def create_post_task(
     elif len(title_clean) > 300:
         errors.append("帖子标题不能超过 300 字符")
 
-    subreddit_clean = (subreddit or "").strip()
-    if not subreddit_clean:
+    subreddits_clean = _clean_subreddits(subreddits)
+    if not subreddits_clean:
         errors.append("目标社区不能为空")
 
     media_path = None
@@ -156,7 +207,7 @@ def create_post_task(
     row = conn.execute(
         """
         insert into tasks
-            (public_token, task_type, title, body, subreddit, flair_text,
+            (public_token, task_type, title, body, subreddits, flair_text,
              media_path, media_type, created_by, created_by_name)
         values (%s, 'post', %s, %s, %s, %s, %s, %s, %s, %s)
         returning id
@@ -165,7 +216,7 @@ def create_post_task(
             token,
             title_clean,
             body,
-            subreddit_clean,
+            subreddits_clean,
             flair_text,
             media_path,
             media_type,
@@ -241,21 +292,24 @@ def create_comment_task(
 
 
 @router.get("/posts")
-def list_posts(request: Request, status: str = "", current=Depends(get_current_user), conn=Depends(get_db)):
-    """帖子任务列表（按 id 倒序，可按状态筛选）。"""
-    status = (status or "").strip()
-    if status not in ("pending", "editing", "completed"):
-        status = ""
-
-    where = "t.task_type = 'post'"
+def list_posts(
+    request: Request,
+    id: str = None,
+    keyword: str = None,
+    status: str = None,
+    date: str = None,
+    current=Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    """帖子任务列表（按 id 倒序，支持 id/keyword/status/date 多条件筛选）。"""
+    conditions = ["t.task_type = 'post'"]
     params: list = []
-    if status:
-        where += " and t.status = %s"
-        params.append(status)
+    _apply_list_filters(conditions, params, id, keyword, status, date, "title")
 
+    where = " and ".join(conditions)
     rows = conn.execute(
         f"""
-        select t.id, t.title, t.subreddit, t.flair_text, t.status, t.public_token,
+        select t.id, t.title, t.subreddits, t.flair_text, t.status, t.public_token,
                (select s.result_url from task_submissions s
                 where s.task_id = t.id order by s.id desc limit 1) as result_url
         from tasks t
@@ -272,7 +326,7 @@ def list_posts(request: Request, status: str = "", current=Depends(get_current_u
             {
                 "id": r["id"],
                 "title": r["title"],
-                "subreddit": r["subreddit"],
+                "subreddits": r["subreddits"] or [],
                 "flair_text": r["flair_text"],
                 "status": r["status"],
                 "public_url": f"/t/{r['public_token']}",
@@ -281,24 +335,25 @@ def list_posts(request: Request, status: str = "", current=Depends(get_current_u
             }
         )
 
-    return templates.TemplateResponse(
-        request, "tasks/posts_list.html", {"tasks": tasks, "filter_status": status}
-    )
+    return templates.TemplateResponse(request, "tasks/posts_list.html", {"tasks": tasks})
 
 
 @router.get("/comments")
-def list_comments(request: Request, status: str = "", current=Depends(get_current_user), conn=Depends(get_db)):
-    """评论任务列表（按 id 倒序，可按状态筛选）。"""
-    status = (status or "").strip()
-    if status not in ("pending", "editing", "completed"):
-        status = ""
-
-    where = "t.task_type = 'comment'"
+def list_comments(
+    request: Request,
+    id: str = None,
+    keyword: str = None,
+    status: str = None,
+    date: str = None,
+    current=Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    """评论任务列表（按 id 倒序，支持 id/keyword/status/date 多条件筛选）。"""
+    conditions = ["t.task_type = 'comment'"]
     params: list = []
-    if status:
-        where += " and t.status = %s"
-        params.append(status)
+    _apply_list_filters(conditions, params, id, keyword, status, date, "target_post_url")
 
+    where = " and ".join(conditions)
     rows = conn.execute(
         f"""
         select t.id, t.target_post_url, t.target_comment_url, t.status, t.public_token,
@@ -326,9 +381,7 @@ def list_comments(request: Request, status: str = "", current=Depends(get_curren
             }
         )
 
-    return templates.TemplateResponse(
-        request, "tasks/comments_list.html", {"tasks": tasks, "filter_status": status}
-    )
+    return templates.TemplateResponse(request, "tasks/comments_list.html", {"tasks": tasks})
 
 
 @router.get("/{task_id}")
@@ -454,7 +507,7 @@ def update_task(
     request: Request,
     title: str = Form(""),
     body: str = Form(""),
-    subreddit: str = Form(""),
+    subreddits: list[str] = Form(default=[]),
     flair_text: str = Form(""),
     target_post_url: str = Form(""),
     comment_body: str = Form(""),
@@ -473,15 +526,15 @@ def update_task(
 
     if task["task_type"] == "post":
         return _update_post_task(
-            request, task, title, body, subreddit, flair_text, media, conn
+            request, task, title, body, subreddits, flair_text, media, conn
         )
     return _update_comment_task(
         request, task, target_post_url, comment_body, target_comment_url, conn
     )
 
 
-def _update_post_task(request, task, title, body, subreddit, flair_text, media, conn):
-    values = {"title": title, "body": body, "subreddit": subreddit, "flair_text": flair_text}
+def _update_post_task(request, task, title, body, subreddits, flair_text, media, conn):
+    values = {"title": title, "body": body, "subreddits": subreddits, "flair_text": flair_text}
     errors = []
 
     title_clean = (title or "").strip()
@@ -490,8 +543,8 @@ def _update_post_task(request, task, title, body, subreddit, flair_text, media, 
     elif len(title_clean) > 300:
         errors.append("帖子标题不能超过 300 字符")
 
-    subreddit_clean = (subreddit or "").strip()
-    if not subreddit_clean:
+    subreddits_clean = _clean_subreddits(subreddits)
+    if not subreddits_clean:
         errors.append("目标社区不能为空")
 
     new_media_path = task["media_path"]
@@ -511,11 +564,11 @@ def _update_post_task(request, task, title, body, subreddit, flair_text, media, 
     conn.execute(
         """
         update tasks
-        set title = %s, body = %s, subreddit = %s, flair_text = %s,
+        set title = %s, body = %s, subreddits = %s, flair_text = %s,
             media_path = %s, media_type = %s, updated_at = now()
         where id = %s
         """,
-        (title_clean, body, subreddit_clean, flair_text, new_media_path, new_media_type, task["id"]),
+        (title_clean, body, subreddits_clean, flair_text, new_media_path, new_media_type, task["id"]),
     )
     conn.commit()
 
