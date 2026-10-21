@@ -1,0 +1,16 @@
+<script>
+(function () {
+  var forms = document.querySelectorAll('form.status-form');
+  Array.prototype.forEach.call(forms, function (form) {
+    form.addEventListener('submit', function (e) {
+      var current = form.getAttribute('data-current-status');
+      var next = form.querySelector('select[name="status"]').value;
+      if (current === 'completed' && next !== 'completed') {
+        if (!confirm('离开已完成将生成新的公开链接，旧链接立即失效，确定？')) {
+          e.preventDefault();
+        }
+      }
+    });
+  });
+})();
+</script>

@@ -9,15 +9,15 @@
     <h1>
       {% if task.task_type == 'post' %}{{ task.title }}{% else %}评论任务 #{{ task.id }}{% endif %}
       {% if task.status == 'completed' %}<span class="badge badge-completed">已完成</span>
+      {% elif task.status == 'editing' %}<span class="badge badge-editing">编辑中</span>
       {% else %}<span class="badge badge-pending">待完成</span>{% endif %}
     </h1>
   </div>
   <div class="detail-actions">
     <button type="button" class="copy-btn btn btn-sm" data-url="{{ absolute_url }}">复制当前链接</button>
-    {% if task.status == 'completed' %}
-    <form method="post" action="/tasks/{{ task.id }}/reset" onsubmit="return confirm('旧链接将立即失效，确定重置？');">
-      <button type="submit" class="btn btn-danger btn-sm">重置为待完成</button>
-    </form>
+    {% include "tasks/_status_form.html" %}
+    {% if task.status == 'editing' %}
+    <a href="/tasks/{{ task.id }}/edit" class="btn btn-sm">编辑</a>
     {% endif %}
   </div>
 </div>
@@ -108,4 +108,5 @@
 </div>
 
 {% include "tasks/_copy_script.html" %}
+{% include "tasks/_status_script.html" %}
 {% endblock %}

@@ -1,12 +1,15 @@
 {% extends "public/base.html" %}
 
-{% block title %}Completed{% endblock %}
+{% block title %}{{ 'Completed' if status == 'completed' else 'Editing' }}{% endblock %}
 
 {% block content %}
 <div class="public-center">
   <div class="card completed-card">
     <p>Task ID: {{ task_id }}</p>
-    <p><span class="badge badge-completed">Completed</span></p>
+    <p>
+      {% if status == 'completed' %}<span class="badge badge-completed">Completed</span>
+      {% else %}<span class="badge badge-editing">Editing</span>{% endif %}
+    </p>
   </div>
 </div>
 {% endblock %}

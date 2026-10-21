@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}编辑帖子 #{{ task.id }} - Reddit 任务管理系统{% endblock %}
+
+{% block content %}
+<div class="card card-form">
+  <h1>编辑帖子 #{{ task.id }}</h1>
+
+  {% if errors %}
+    <div class="alert alert-error">
+      {% for e in errors %}<p>{{ e }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" action="/tasks/{{ task.id }}/edit" enctype="multipart/form-data">
+    <p class="muted">带 <span class="required">*</span> 为必填项</p>
+
+    <div class="form-group">
+      <label>帖子标题 <span class="required">*</span></label>
+      <input type="text" name="title" value="{{ title }}" maxlength="300" required>
+    </div>
+
+    <div class="form-group">
+      <label>正文（可选）</label>
+      <textarea name="body" rows="6">{{ body }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label>目标社区 <span class="required">*</span></label>
+      <input type="text" name="subreddit" value="{{ subreddit }}" placeholder="例如：python" required>
+      <small class="muted">不要带 r/ 前缀</small>
+    </div>
+
+    <div class="form-group">
+      <label>标签（可选）</label>
+      <input type="text" name="flair_text" value="{{ flair_text }}">
+    </div>
+
+    <div class="form-group">
+      <label>媒体文件（可选）</label>
+      {% if media_url %}
+        <div class="media-current">
+          {% if task.media_type == 'video/mp4' %}
+            <video src="{{ media_url }}" controls class="media-preview"></video>
+          {% else %}
+            <img src="{{ media_url }}" alt="当前媒体" class="media-preview">
+          {% endif %}
+        </div>
+        <small class="muted">选择新文件将替换并删除上面的旧文件</small>
+      {% endif %}
+      <input type="file" name="media" id="media-input" accept="image/jpeg,image/png,video/mp4">
+      <small class="muted">仅支持 JPEG / PNG / MP4；图片 ≤20MB，视频 ≤1GB</small>
+      <span id="media-filename" class="muted filename"></span>
+    </div>
+
+    <div class="form-actions">
+      <a href="/tasks/{{ task.id }}" class="btn">取消</a>
+      <button type="submit" class="btn btn-primary">保存修改</button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.getElementById('media-input').addEventListener('change', function () {
+  var name = this.files && this.files.length ? this.files[0].name : '';
+  document.getElementById('media-filename').textContent = name;
+});
+</script>
+{% endblock %}

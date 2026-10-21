@@ -82,9 +82,9 @@ def _build_pending_context(task):
     return context
 
 
-def _render_completed(request, task_id):
+def _render_locked(request, task_id, status):
     resp = templates.TemplateResponse(
-        request, "public/completed.html", {"task_id": task_id}
+        request, "public/completed.html", {"task_id": task_id, "status": status}
     )
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -117,8 +117,8 @@ def public_task_page(token: str, request: Request, conn=Depends(get_db)):
             request, "public/not_found.html", {}, status_code=404
         )
 
-    if task["status"] == "completed":
-        return _render_completed(request, task["id"])
+    if task["status"] in ("completed", "editing"):
+        return _render_locked(request, task["id"], task["status"])
 
     resp = templates.TemplateResponse(
         request, "public/task.html", _build_pending_context(task)
@@ -150,8 +150,8 @@ def submit_task(
             request, "public/not_found.html", {}, status_code=404
         )
 
-    if task["status"] == "completed":
-        return _render_completed(request, task["id"])
+    if task["status"] in ("completed", "editing"):
+        return _render_locked(request, task["id"], task["status"])
 
     # ---- 校验（失败返回原表单，不改变任务状态）----
     errors = []
@@ -214,7 +214,7 @@ def submit_task(
             delete_media(temp_path)
         except Exception:
             log.warning("清理临时截图失败: %s", temp_path, exc_info=True)
-        return _render_completed(request, task["id"])
+        return _render_locked(request, task["id"], "completed")
 
     task_id = row["id"]
 
@@ -249,4 +249,4 @@ def submit_task(
     except Exception:
         log.warning("移动截图失败: %s -> %s", temp_path, final_path, exc_info=True)
 
-    return _render_completed(request, task_id)
+    return _render_locked(request, task_id, "completed")

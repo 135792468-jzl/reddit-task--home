@@ -11,6 +11,7 @@
 <div class="filter-bar">
   <a href="/tasks/posts" class="{{ 'active' if filter_status == '' else '' }}">全部</a>
   <a href="/tasks/posts?status=pending" class="{{ 'active' if filter_status == 'pending' else '' }}">待完成</a>
+  <a href="/tasks/posts?status=editing" class="{{ 'active' if filter_status == 'editing' else '' }}">编辑中</a>
   <a href="/tasks/posts?status=completed" class="{{ 'active' if filter_status == 'completed' else '' }}">已完成</a>
 </div>
 
@@ -38,6 +39,7 @@
         <td>{{ task.flair_text or '' }}</td>
         <td>
           {% if task.status == 'completed' %}<span class="badge badge-completed">已完成</span>
+          {% elif task.status == 'editing' %}<span class="badge badge-editing">编辑中</span>
           {% else %}<span class="badge badge-pending">待完成</span>{% endif %}
         </td>
         <td>
@@ -47,12 +49,10 @@
           {% if task.result_url %}<a href="{{ task.result_url }}" target="_blank">{{ task.result_url }}</a>{% endif %}
         </td>
         <td>
-          <a href="/tasks/{{ task.id }}" class="btn btn-sm">详情</a>
-          {% if task.status == 'completed' %}
-          <form method="post" action="/tasks/{{ task.id }}/reset" onsubmit="return confirm('旧链接将立即失效，确定重置？');">
-            <button type="submit" class="btn btn-danger btn-sm">重置为待完成</button>
-          </form>
-          {% endif %}
+          <div class="row-actions">
+            <a href="/tasks/{{ task.id }}" class="btn btn-sm">详情</a>
+            {% include "tasks/_status_form.html" %}
+          </div>
         </td>
       </tr>
       {% endfor %}
@@ -64,4 +64,5 @@
 {% endif %}
 
 {% include "tasks/_copy_script.html" %}
+{% include "tasks/_status_script.html" %}
 {% endblock %}

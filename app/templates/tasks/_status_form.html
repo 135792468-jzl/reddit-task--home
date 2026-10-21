@@ -1,0 +1,8 @@
+<form method="post" action="/tasks/{{ task.id }}/status" class="status-form" data-current-status="{{ task.status }}">
+  <select name="status" aria-label="任务状态">
+    <option value="pending" {% if task.status == 'pending' %}selected{% endif %}>待完成</option>
+    <option value="editing" {% if task.status == 'editing' %}selected{% endif %}>编辑中</option>
+    <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>已完成</option>
+  </select>
+  <button type="submit" class="btn btn-sm">设置</button>
+</form>

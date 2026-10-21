@@ -126,6 +126,11 @@ footer p { margin: 0; }
   color: #1e6b34;
   border: 1px solid #a8d5b0;
 }
+.badge-editing {
+  background: #e3f0fb;
+  color: #1d4ed8;
+  border: 1px solid #b6d4f0;
+}
 
 .table {
   width: 100%;
@@ -262,7 +267,9 @@ td .btn { margin-right: 0.3rem; }
 .detail-head h1 { margin: 0.2rem 0 0; }
 .back-link { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
 .back-link:hover { color: var(--primary); }
-.detail-actions { display: flex; align-items: center; gap: 0.5rem; }
+.detail-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.status-form { display: inline-flex; align-items: center; gap: 0.4rem; }
+.row-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
 .field-list {
   display: grid;
@@ -285,6 +292,7 @@ td .btn { margin-right: 0.3rem; }
   display: block;
 }
 video.media-preview { width: 100%; }
+.media-current { margin: 0.4rem 0 0.6rem; }
 
 .submission-list { display: flex; flex-direction: column; gap: var(--space); }
 .submission-item {
