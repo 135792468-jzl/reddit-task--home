@@ -27,7 +27,7 @@ def _fetch_users(conn):
             "username": r["username"],
             "is_admin": r["is_admin"],
             "is_active": r["is_active"],
-            "created_at": r["created_at"].strftime("%Y-%m-%d %H:%M:%S") if r["created_at"] else "",
+            "created_at": r["created_at"],
         }
         for r in rows
     ]

@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.auth import get_current_user
 from app.db import get_db
@@ -75,7 +75,7 @@ def _fetch_task_by_id(conn, task_id):
         """
         select id, public_token, task_type, title, body, subreddits, flair_text,
                media_path, media_type, target_post_url, comment_body, target_comment_url,
-               status, created_by_name, created_at
+               status, is_archived, remark, created_by_name, created_at
         from tasks
         where id = %s
         """,
@@ -302,7 +302,7 @@ def list_posts(
     conn=Depends(get_db),
 ):
     """帖子任务列表（按 id 倒序，支持 id/keyword/status/date 多条件筛选）。"""
-    conditions = ["t.task_type = 'post'"]
+    conditions = ["t.task_type = 'post'", "t.is_archived = false"]
     params: list = []
     _apply_list_filters(conditions, params, id, keyword, status, date, "title")
 
@@ -310,6 +310,7 @@ def list_posts(
     rows = conn.execute(
         f"""
         select t.id, t.title, t.subreddits, t.flair_text, t.status, t.public_token,
+               t.remark, t.created_at,
                (select s.result_url from task_submissions s
                 where s.task_id = t.id order by s.id desc limit 1) as result_url
         from tasks t
@@ -329,6 +330,8 @@ def list_posts(
                 "subreddits": r["subreddits"] or [],
                 "flair_text": r["flair_text"],
                 "status": r["status"],
+                "remark": r["remark"],
+                "created_at": r["created_at"],
                 "public_url": f"/t/{r['public_token']}",
                 "absolute_url": f"{base}/t/{r['public_token']}",
                 "result_url": r["result_url"],
@@ -349,7 +352,7 @@ def list_comments(
     conn=Depends(get_db),
 ):
     """评论任务列表（按 id 倒序，支持 id/keyword/status/date 多条件筛选）。"""
-    conditions = ["t.task_type = 'comment'"]
+    conditions = ["t.task_type = 'comment'", "t.is_archived = false"]
     params: list = []
     _apply_list_filters(conditions, params, id, keyword, status, date, "target_post_url")
 
@@ -357,6 +360,7 @@ def list_comments(
     rows = conn.execute(
         f"""
         select t.id, t.target_post_url, t.target_comment_url, t.status, t.public_token,
+               t.remark, t.created_at,
                (select s.result_url from task_submissions s
                 where s.task_id = t.id order by s.id desc limit 1) as result_url
         from tasks t
@@ -375,6 +379,8 @@ def list_comments(
                 "target_post_url": r["target_post_url"],
                 "is_reply": bool(r["target_comment_url"]),
                 "status": r["status"],
+                "remark": r["remark"],
+                "created_at": r["created_at"],
                 "public_url": f"/t/{r['public_token']}",
                 "absolute_url": f"{base}/t/{r['public_token']}",
                 "result_url": r["result_url"],
@@ -382,6 +388,41 @@ def list_comments(
         )
 
     return templates.TemplateResponse(request, "tasks/comments_list.html", {"tasks": tasks})
+
+
+@router.get("/archived")
+def list_archived(request: Request, current=Depends(get_current_user), conn=Depends(get_db)):
+    """已归档任务列表：帖子 + 评论统一展示，按 id 倒序。"""
+    rows = conn.execute(
+        """
+        select t.id, t.task_type, t.title, t.target_post_url, t.status, t.remark,
+               t.created_at, t.public_token,
+               (select s.result_url from task_submissions s
+                where s.task_id = t.id order by s.id desc limit 1) as result_url
+        from tasks t
+        where t.is_archived = true
+        order by t.id desc
+        """
+    ).fetchall()
+
+    base = str(request.base_url).rstrip("/")
+    tasks = []
+    for r in rows:
+        tasks.append(
+            {
+                "id": r["id"],
+                "task_type": r["task_type"],
+                "title": r["title"],
+                "target_post_url": r["target_post_url"],
+                "status": r["status"],
+                "remark": r["remark"],
+                "created_at": r["created_at"],
+                "absolute_url": f"{base}/t/{r['public_token']}",
+                "result_url": r["result_url"],
+            }
+        )
+
+    return templates.TemplateResponse(request, "tasks/archived_list.html", {"tasks": tasks})
 
 
 @router.get("/{task_id}")
@@ -483,6 +524,48 @@ def set_task_status(task_id: int, request: Request, status: str = Form(...), cur
         request.session["flash"] = f"已切换为{_STATUS_LABELS[status]}"
 
     return RedirectResponse(url=f"/tasks/{task_id}", status_code=303)
+
+
+@router.post("/{task_id}/archive")
+def archive_task(task_id: int, current=Depends(get_current_user), conn=Depends(get_db)):
+    """归档任务（列表页操作列「归档」按钮）。"""
+    task = conn.execute("select id, task_type from tasks where id = %s", (task_id,)).fetchone()
+    if task is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
+
+    conn.execute(
+        "update tasks set is_archived = true, updated_at = now() where id = %s", (task_id,)
+    )
+    back = "/tasks/posts" if task["task_type"] == "post" else "/tasks/comments"
+    return RedirectResponse(url=back, status_code=303)
+
+
+@router.post("/{task_id}/unarchive")
+def unarchive_task(task_id: int, current=Depends(get_current_user), conn=Depends(get_db)):
+    """取消归档（归档列表页操作列「取消归档」按钮）。"""
+    task = conn.execute("select id from tasks where id = %s", (task_id,)).fetchone()
+    if task is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
+
+    conn.execute(
+        "update tasks set is_archived = false, updated_at = now() where id = %s", (task_id,)
+    )
+    return RedirectResponse(url="/tasks/archived", status_code=303)
+
+
+@router.post("/{task_id}/remark")
+def set_task_remark(task_id: int, remark: str = Form(""), current=Depends(get_current_user), conn=Depends(get_db)):
+    """保存任务备注（列表页 / 详情页内联编辑，Fetch 调用，返回 JSON 不刷新页面）。"""
+    task = conn.execute("select id from tasks where id = %s", (task_id,)).fetchone()
+    if task is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
+
+    remark_clean = (remark or "").strip()
+    conn.execute(
+        "update tasks set remark = %s, updated_at = now() where id = %s",
+        (remark_clean or None, task_id),
+    )
+    return JSONResponse({"ok": True, "remark": remark_clean})
 
 
 @router.get("/{task_id}/edit")

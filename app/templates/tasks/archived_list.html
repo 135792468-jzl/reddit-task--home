@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}归档任务 - Reddit 任务管理系统{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>归档任务</h1>
+</div>
+
+{% if tasks %}
+<div class="table-wrap">
+  <table class="table table-fixed">
+    <colgroup>
+      <col style="width: 70px">
+      <col style="width: 70px">
+      <col>
+      <col style="width: 70px">
+      <col style="width: 155px">
+      <col style="width: 130px">
+      <col style="width: 150px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>任务 ID</th>
+        <th>类型</th>
+        <th>内容</th>
+        <th>状态</th>
+        <th>录入时间</th>
+        <th>备注</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in tasks %}
+      <tr>
+        <td class="col-id">{{ task.id }}</td>
+        <td>
+          {% if task.task_type == 'post' %}<span class="badge badge-type-post">帖子</span>
+          {% else %}<span class="badge badge-type-comment">评论</span>{% endif %}
+        </td>
+        <td>
+          {% if task.task_type == 'post' %}
+            <span class="cell-truncate" title="{{ task.title }}">{{ task.title }}</span>
+          {% else %}
+            <a href="{{ task.target_post_url }}" target="_blank" class="link-truncate" title="{{ task.target_post_url }}">{{ task.target_post_url }}</a>
+          {% endif %}
+        </td>
+        <td>
+          {% if task.status == 'completed' %}<span class="badge badge-completed">已完成</span>
+          {% elif task.status == 'editing' %}<span class="badge badge-editing">编辑中</span>
+          {% else %}<span class="badge badge-pending">待完成</span>{% endif %}
+        </td>
+        <td class="col-created">{{ task.created_at | format_time }}</td>
+        <td class="remark-cell" data-task-id="{{ task.id }}" data-remark="{{ task.remark or '' }}">
+          <span class="remark-text {% if not task.remark %}remark-placeholder{% endif %}">{{ task.remark or '点击添加备注' }}</span>
+        </td>
+        <td>
+          <div class="row-actions">
+            <a href="/tasks/{{ task.id }}" class="btn btn-sm">详情</a>
+            <form method="post" action="/tasks/{{ task.id }}/unarchive">
+              <button type="submit" class="btn btn-sm">取消归档</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">暂无归档任务</div>
+{% endif %}
+
+{% include "tasks/_remark_script.html" %}
+{% endblock %}

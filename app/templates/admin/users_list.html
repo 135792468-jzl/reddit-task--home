@@ -31,7 +31,7 @@
         <td>{{ u.username }}{% if is_self %} <span class="muted">（我）</span>{% endif %}</td>
         <td>{% if u.is_admin %}<span class="badge badge-admin">管理员</span>{% else %}<span class="badge badge-operator">普通操作员</span>{% endif %}</td>
         <td>{% if u.is_active %}<span class="badge badge-enabled">启用</span>{% else %}<span class="badge badge-disabled">禁用</span>{% endif %}</td>
-        <td>{{ u.created_at }}</td>
+        <td>{{ u.created_at | format_time }}</td>
         <td class="actions">
           <button type="button" class="btn btn-sm" onclick="document.getElementById('reset-dialog-{{ u.id }}').showModal()">重置密码</button>
 

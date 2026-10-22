@@ -1,0 +1,72 @@
+<script>
+(function () {
+  function makeRemarkEditable(cell) {
+    if (cell.getAttribute('data-remark-bound')) return;
+    cell.setAttribute('data-remark-bound', '1');
+
+    var taskId = cell.getAttribute('data-task-id');
+    var current = cell.getAttribute('data-remark') || '';
+
+    cell.addEventListener('click', function () {
+      if (cell.querySelector('input')) return;
+
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'remark-input';
+      input.value = current;
+      cell.innerHTML = '';
+      cell.appendChild(input);
+      input.focus();
+
+      var finished = false;
+
+      function render(text) {
+        var s = document.createElement('span');
+        s.className = 'remark-text' + (text ? '' : ' remark-placeholder');
+        s.textContent = text || '点击添加备注';
+        cell.innerHTML = '';
+        cell.appendChild(s);
+        cell.setAttribute('data-remark', text);
+        current = text;
+      }
+
+      function save() {
+        if (finished) return;
+        finished = true;
+        var value = input.value;
+        fetch('/tasks/' + taskId + '/remark', {
+          method: 'POST',
+          body: new URLSearchParams({ remark: value })
+        }).then(function (resp) { return resp.json(); })
+          .then(function (data) {
+            if (data && data.ok) {
+              render(data.remark || '');
+            } else {
+              alert('保存失败');
+              render(current);
+            }
+          })
+          .catch(function () {
+            alert('保存失败');
+            render(current);
+          });
+      }
+
+      function cancel() {
+        if (finished) return;
+        finished = true;
+        render(current);
+      }
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        else if (e.key === 'Escape') { cancel(); }
+      });
+      input.addEventListener('blur', save);
+    });
+  }
+
+  var cells = document.querySelectorAll('.remark-cell');
+  Array.prototype.forEach.call(cells, makeRemarkEditable);
+})();
+</script>

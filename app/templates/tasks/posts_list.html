@@ -26,14 +26,16 @@
 <div class="table-wrap">
   <table class="table table-fixed">
     <colgroup>
+      <col style="width: 70px">
+      <col style="width: 160px">
+      <col>
       <col style="width: 80px">
-      <col style="width: 180px">
-      <col>
-      <col>
-      <col style="width: 85px">
-      <col style="width: 90px">
+      <col style="width: 70px">
+      <col style="width: 80px">
       <col style="width: 150px">
-      <col style="width: 205px">
+      <col style="width: 155px">
+      <col style="width: 130px">
+      <col style="width: 260px">
     </colgroup>
     <thead>
       <tr>
@@ -44,6 +46,8 @@
         <th>状态</th>
         <th>公开链接</th>
         <th style="max-width: 150px">提交结果链接</th>
+        <th>录入时间</th>
+        <th>备注</th>
         <th>操作</th>
       </tr>
     </thead>
@@ -65,10 +69,17 @@
         <td>
           {% if task.result_url %}<a href="{{ task.result_url }}" target="_blank" class="link-truncate link-truncate--result" title="{{ task.result_url }}">{{ task.result_url }}</a>{% endif %}
         </td>
+        <td class="col-created">{{ task.created_at | format_time }}</td>
+        <td class="remark-cell" data-task-id="{{ task.id }}" data-remark="{{ task.remark or '' }}">
+          <span class="remark-text {% if not task.remark %}remark-placeholder{% endif %}">{{ task.remark or '点击添加备注' }}</span>
+        </td>
         <td>
           <div class="row-actions">
             <a href="/tasks/{{ task.id }}" class="btn btn-sm">详情</a>
             {% include "tasks/_status_form.html" %}
+            <form method="post" action="/tasks/{{ task.id }}/archive">
+              <button type="submit" class="btn btn-sm">归档</button>
+            </form>
           </div>
         </td>
       </tr>
@@ -82,4 +93,5 @@
 
 {% include "tasks/_copy_script.html" %}
 {% include "tasks/_status_script.html" %}
+{% include "tasks/_remark_script.html" %}
 {% endblock %}

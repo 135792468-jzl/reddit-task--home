@@ -16,6 +16,7 @@
             <a href="/tasks/comment/new" class="{{ 'active' if active_page == 'comment_new' else '' }}">录入评论</a>
             <a href="/tasks/posts" class="{{ 'active' if active_page == 'posts' else '' }}">帖子任务</a>
             <a href="/tasks/comments" class="{{ 'active' if active_page == 'comments' else '' }}">评论任务</a>
+            <a href="/tasks/archived" class="{{ 'active' if active_page == 'archived' else '' }}">归档任务</a>
             {% if current_user.is_admin %}<a href="/admin/users" class="{{ 'active' if active_page == 'admin_users' else '' }}">账号管理</a>{% endif %}
         </div>
         <div class="nav-user">

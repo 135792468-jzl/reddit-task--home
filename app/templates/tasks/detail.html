@@ -65,7 +65,11 @@
     <span class="field-label">创建人</span>
     <span class="field-value">{{ task.created_by_name }}</span>
     <span class="field-label">创建时间</span>
-    <span class="field-value">{{ task.created_at }}</span>
+    <span class="field-value">{{ task.created_at | format_time }}</span>
+    <span class="field-label">备注</span>
+    <span class="field-value remark-cell" data-task-id="{{ task.id }}" data-remark="{{ task.remark or '' }}">
+      <span class="remark-text {% if not task.remark %}remark-placeholder{% endif %}">{{ task.remark or '点击添加备注' }}</span>
+    </span>
     <span class="field-label">公开链接</span>
     <span class="field-value">
       <a href="{{ public_absolute_url }}" target="_blank">{{ public_absolute_url }}</a>
@@ -81,7 +85,7 @@
     {% for s in submissions %}
     <div class="submission-item">
       <div class="submission-meta">
-        <span>{{ s.created_at }}</span>
+        <span>{{ s.created_at | format_time }}</span>
         {% if s.submitter_ip %}<span>IP：{{ s.submitter_ip }}</span>{% endif %}
       </div>
       <div class="submission-body">
@@ -109,4 +113,5 @@
 
 {% include "tasks/_copy_script.html" %}
 {% include "tasks/_status_script.html" %}
+{% include "tasks/_remark_script.html" %}
 {% endblock %}
